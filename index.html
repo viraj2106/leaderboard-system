@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Leaderboard App</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            text-align: center;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 50px auto;
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 15px;
+        }
+
+        select, input {
+            padding: 10px;
+            margin: 5px;
+            border-radius: 8px;
+            border: none;
+        }
+
+        button {
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: none;
+            background: #00c9a7;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #00a78e;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        li {
+            background: white;
+            color: black;
+            margin: 10px 0;
+            padding: 12px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .delete-btn {
+            background: red;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .delete-btn:hover {
+            background: darkred;
+        }
+
+        #status {
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>🏆 Leaderboard</h1>
+
+    <!-- Filters -->
+    <select id="game">
+        <option value="cricket">Cricket</option>
+        <option value="football">Football</option>
+    </select>
+
+    <select id="level">
+        <option value="national">National</option>
+        <option value="state">State</option>
+        <option value="international">International</option>
+    </select>
+
+    <br><br>
+
+    <!-- Inputs -->
+    <input id="username" placeholder="Enter name">
+    <input id="score" placeholder="Enter score">
+    <button onclick="addScore()">Add</button>
+
+    <p id="status">🟢 Live</p>
+
+    <ul id="list"></ul>
+
+</div>
+
+<script>
+let autoRefreshInterval;
+
+function getFilters() {
+    const game = document.getElementById("game").value;
+    const level = document.getElementById("level").value;
+    return { game, level };
+}
+
+async function addScore() {
+    const username = document.getElementById("username").value;
+    const score = document.getElementById("score").value;
+    const { game, level } = getFilters();
+
+    await fetch(`/add?username=${username}&score=${score}&game=${game}&level=${level}`);
+    loadLeaderboard();
+}
+
+async function deleteUser(username) {
+    const { game, level } = getFilters();
+
+    await fetch(`/delete?username=${username}&game=${game}&level=${level}`);
+    loadLeaderboard();
+}
+
+async function loadLeaderboard() {
+    const { game, level } = getFilters();
+
+    const status = document.getElementById("status");
+    status.innerText = "🔄 Updating...";
+
+    const res = await fetch(`/top?game=${game}&level=${level}`);
+    const data = await res.json();
+
+    const list = document.getElementById("list");
+    list.innerHTML = "";
+
+    data.forEach((user, index) => {
+        const li = document.createElement("li");
+
+        li.innerHTML = `
+            <span>#${index + 1} ${user.value}</span>
+            <span>${user.score}</span>
+            <button class="delete-btn" onclick="deleteUser('${user.value}')">❌</button>
+        `;
+
+        list.appendChild(li);
+    });
+
+    status.innerText = "🟢 Live";
+}
+
+// 🔄 Auto refresh every 3 sec
+function startAutoRefresh() {
+    clearInterval(autoRefreshInterval);
+    autoRefreshInterval = setInterval(loadLeaderboard, 3000);
+}
+
+// reload on dropdown change
+document.getElementById("game").onchange = loadLeaderboard;
+document.getElementById("level").onchange = loadLeaderboard;
+
+// start app
+loadLeaderboard();
+startAutoRefresh();
+</script>
+
+</body>
+</html>
